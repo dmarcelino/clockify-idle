@@ -1,5 +1,6 @@
 import atexit
 import clockify
+import configparser
 from ctypes import Structure, windll, c_uint, sizeof, byref
 from datetime import datetime
 from datetime import timedelta
@@ -12,8 +13,11 @@ import wx.adv
 import wx
 
 
-LOOP_TIME = 10.0  # 5.0 * 60  # seconds
-IDLE_THRESHOLD = 10  # 15 * 60  # seconds
+config = configparser.ConfigParser()
+config.read('config.ini')
+
+LOOP_TIME = int(config['idleless'].get('CheckRateMinutes', 3)) * 60  # seconds
+IDLE_THRESHOLD = int(config['idleless'].get('IdleThresholdMinutes', 15)) * 60  # seconds
 
 TRAY_TOOLTIP = 'Clockify Idleless'
 TRAY_ICON = 'Clockify.ico'
