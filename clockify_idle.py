@@ -2,18 +2,21 @@ import atexit
 import clockify
 from ctypes import Structure, windll, c_uint, sizeof, byref
 from datetime import datetime
+from datetime import timedelta
 from datetime import timezone
 import json
-import os
 import signal
 import sys
 import threading
+import wx.adv
+import wx
+
 
 LOOP_TIME = 10.0  # 5.0 * 60  # seconds
 IDLE_THRESHOLD = 10  # 15 * 60  # seconds
 
-API_KEY = os.environ['CLOCKIFY_KEY']
-API_BASE = 'https://api.clockify.me/api/v1'
+TRAY_TOOLTIP = 'Clockify Idleless'
+TRAY_ICON = 'Clockify.ico'
 
 CACHE_FILE = 'cache.json'
 CACHE = {}
@@ -45,7 +48,6 @@ def start_timer():
     CACHE['current_time_entry_id'] = response['id']
     CACHE['start_timestamp'] = datetime.timestamp(datetime.now(timezone.utc))
     CACHE['last_active_timestamp'] = datetime.timestamp(datetime.now())
-    dump_cache()
     return current_time_entry
 
 
@@ -66,12 +68,24 @@ def stop_timer(end_datetime=None):
     return response
 
 
+def exit_app():
+    stop_timer()
+    dump_cache()
+    CACHE['exit'] = True
+    print('Exiting... Have a nice day!')
+
+
 def is_timer_running():
     return 'current_time_entry' in CACHE
 
 
 def idle_check():
-    threading.Timer(LOOP_TIME, idle_check).start()
+    if CACHE.get('exit', False):
+        return
+
+    t = threading.Timer(LOOP_TIME, idle_check)
+    t.daemon = True
+    t.start()
 
     now_timestamp = datetime.timestamp(datetime.now(timezone.utc))
     if is_timer_running():
@@ -93,7 +107,7 @@ def idle_check():
 
         # let's keep the file updated in case of a unexpected shutdown or sleep happens
         CACHE['last_active_timestamp'] = now_timestamp
-        dump_cache()
+    dump_cache()
 
 
 class LASTINPUTINFO(Structure):
@@ -111,9 +125,62 @@ def get_idle_duration():
     return millis / 1000.0
 
 
+#
+# UI - Tray Icon
+#
+def create_menu_item(menu, label, func):
+    item = wx.MenuItem(menu, -1, label)
+    menu.Bind(wx.EVT_MENU, func, id=item.GetId())
+    menu.Append(item)
+    return item
+
+
+class TaskBarIcon(wx.adv.TaskBarIcon):
+    def __init__(self, frame):
+        self.frame = frame
+        super(TaskBarIcon, self).__init__()
+        self.set_icon(TRAY_ICON)
+        self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self.on_left_down)
+
+    def CreatePopupMenu(self):
+        menu = wx.Menu()
+        create_menu_item(menu, 'Duration', self.on_duration)
+        menu.AppendSeparator()
+        create_menu_item(menu, 'Exit', self.on_exit)
+        return menu
+
+    def set_icon(self, path):
+        icon = wx.Icon(path)
+        self.SetIcon(icon, TRAY_TOOLTIP)
+
+    def on_left_down(self, event):
+        print ('Tray icon was left-clicked.')
+
+    def on_duration(self, event):
+        print ('Duration pressed')
+        duration = datetime.timestamp(datetime.now(timezone.utc)) - CACHE['start_timestamp']
+        duration = str(timedelta(seconds=round(duration)))
+        wx.MessageBox("Time entry duration: {}.".format(duration),
+                            "Clockify Duration", wx.OK | wx.ICON_INFORMATION)
+
+    def on_exit(self, event):
+        wx.CallAfter(self.Destroy)
+        self.frame.Close()
+
+
+class App(wx.App):
+    def OnInit(self):
+        frame=wx.Frame(None)
+        self.SetTopWindow(frame)
+        TaskBarIcon(frame)
+        return True
+
+
 def main():
     load_cache()
     idle_check()
+    app = App(False)
+    app.MainLoop()
 
 
 def exit_gracefully(signum, frame):
@@ -121,7 +188,7 @@ def exit_gracefully(signum, frame):
     # in raw_input when CTRL+C is pressed, and our signal handler is not re-entrant
     signal.signal(signal.SIGINT, original_sigint)
     print('Exiting gracefully')
-    stop_timer()
+    exit_app()
     sys.exit(1)
 
 
@@ -129,5 +196,5 @@ if __name__ == '__main__':
     # store the original SIGINT handler
     original_sigint = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, exit_gracefully)
-    atexit.register(stop_timer)
+    atexit.register(exit_app)
     main()
