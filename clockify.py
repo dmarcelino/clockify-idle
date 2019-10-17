@@ -114,6 +114,7 @@ def get_time_entries(month=NOW.month, year=NOW.year):
         "start": start.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
         "end": end.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
         "hydrated": True,
+        "page-size": 1000,  # TODO: handle pagination
     }
     headers = get_headers(API_KEY)
 
