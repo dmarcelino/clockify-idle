@@ -51,7 +51,12 @@ def start_timer():
     CACHE['current_time_entry'] = current_time_entry
     CACHE['current_time_entry_id'] = response['id']
     CACHE['start_timestamp'] = datetime.timestamp(datetime.now(timezone.utc))
-    CACHE['last_active_timestamp'] = datetime.timestamp(datetime.now())
+    local_now = datetime.now()
+    local_now_timestamp = datetime.timestamp(local_now)
+    CACHE['last_active_timestamp'] = local_now_timestamp
+    if datetime.fromtimestamp(CACHE.get('today_start_timestamp', 0)).date() != local_now.date():
+        CACHE['today_start_timestamp'] = local_now_timestamp
+        CACHE['today_active_time'] = 0
     return current_time_entry
 
 
@@ -65,6 +70,7 @@ def stop_timer(end_datetime=None):
     print('■ Stop timer: {}'.format(end_datetime))
     CACHE['current_time_entry']['end'] = end_datetime.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     response = clockify.send_time_entry(CACHE['current_time_entry'], CACHE['current_time_entry_id'])
+    CACHE['today_active_time'] += datetime.timestamp(end_datetime) - CACHE['start_timestamp']
     del CACHE['current_time_entry']
     del CACHE['current_time_entry_id']
     del CACHE['last_active_timestamp']
@@ -97,7 +103,7 @@ def idle_check():
         if time_diff > max(LOOP_TIME, IDLE_THRESHOLD) * 2:
             print('Process slept/suspended/stopped')
             stop_timer(datetime.fromtimestamp(CACHE['last_active_timestamp'], timezone.utc))
-        elif datetime.now().day > datetime.fromtimestamp(CACHE['start_timestamp']).day:
+        elif datetime.now().date() > datetime.fromtimestamp(CACHE['start_timestamp']).date():
             print('We crossed midnight')
             stop_timer()
 
@@ -162,9 +168,17 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
     def on_duration(self, event):
         print ('Duration pressed')
-        duration = datetime.timestamp(datetime.now(timezone.utc)) - CACHE['start_timestamp']
+        now = datetime.timestamp(datetime.now(timezone.utc))
+        # duration = now - CACHE.get('start_timestamp', now)  # Time entry duration
+        duration = CACHE['today_active_time'] + now - CACHE['start_timestamp']
         duration = str(timedelta(seconds=round(duration)))
-        wx.MessageBox("Time entry duration: {}.".format(duration),
+
+        now_local = datetime.timestamp(datetime.now())
+        day_duration = now_local - CACHE.get('today_start_timestamp', now_local)
+        day_duration = str(timedelta(seconds=round(day_duration)))
+
+        wx.MessageBox("Active time today: {}\n"
+                      "Duration since start of day: {}.".format(duration, day_duration),
                             "Clockify Duration", wx.OK | wx.ICON_INFORMATION)
 
     def on_exit(self, event):

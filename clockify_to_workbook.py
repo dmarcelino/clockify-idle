@@ -44,7 +44,7 @@ def process_time_entries(time_entries):
             end_time = dateutil.parser.parse(entry["timeInterval"]["end"])
         except TypeError:
             end_time = NOW
-        if end_time.day > start_time.day:
+        if end_time.date() > start_time.date():
             end_time = datetime(year=start_time.year, month=start_time.month, day=start_time.day,
                                 hour=23, minute=59, second=59, microsecond=999, tzinfo=start_time.tzinfo)
         day_details["end_time"] = get_later_date(end_time, day_details.get("end_time"))
