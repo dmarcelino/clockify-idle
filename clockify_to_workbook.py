@@ -71,15 +71,17 @@ def export_to_workbook(daily_work, month=NOW.month):
     worksheet = workbook.add_worksheet(calendar.month_name[month])
 
     worksheet.write(0, 0, "Day")
-    worksheet.write(0, 1, "Hours")
-    worksheet.write(0, 2, "Clients")
+    worksheet.write(0, 1, "Total Hours")
+    worksheet.write(0, 2, "Active Hours")
+    worksheet.write(0, 3, "Clients")
 
     for key in range(1, 32):
         worksheet.write(key, 0, key)
         day_details = daily_work.get(key)
         if day_details:
             worksheet.write(key, 1, day_details["work_day_hours"])
-            worksheet.write(key, 2, ', '.join(day_details["clients"]))
+            worksheet.write(key, 2, day_details["duration_hours"])
+            worksheet.write(key, 3, ', '.join(day_details["clients"]))
     workbook.close()
 
 
