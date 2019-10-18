@@ -4,11 +4,22 @@ from datetime import datetime
 from datetime import timezone
 import json
 import os
+from pathlib import Path
 import requests
+from shutil import copyfile
 
+
+default_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.ini')
+
+user_config_folder = str(Path.home() / '.clockify_idleless')
+if not os.path.exists(user_config_folder):
+    os.makedirs(user_config_folder)
+user_config = os.path.join(user_config_folder, 'config.ini')
+if not os.path.exists(user_config):
+    copyfile(default_config, user_config)
 
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read([default_config, user_config])
 
 if not config['clockify.me'].get('APIKey'):
     config['clockify.me']['APIKey'] = os.environ['CLOCKIFY_KEY']

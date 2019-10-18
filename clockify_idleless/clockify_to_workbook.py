@@ -1,5 +1,5 @@
 import calendar
-import clockify
+from clockify_idleless import clockify
 from datetime import datetime
 from datetime import timezone
 import dateutil.parser

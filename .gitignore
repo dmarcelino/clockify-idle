@@ -70,3 +70,10 @@ bower_components/
 
 *.xlsx
 cache.json
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs

@@ -1,11 +1,11 @@
 import atexit
-import clockify
-import configparser
+from clockify_idleless import clockify
 from ctypes import Structure, windll, c_uint, sizeof, byref
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 import json
+import os
 import signal
 import sys
 import threading
@@ -13,16 +13,13 @@ import wx.adv
 import wx
 
 
-config = configparser.ConfigParser()
-config.read('config.ini')
-
-LOOP_TIME = int(config['idleless'].get('CheckRateMinutes', 3)) * 60  # seconds
-IDLE_THRESHOLD = int(config['idleless'].get('IdleThresholdMinutes', 15)) * 60  # seconds
+LOOP_TIME = int(clockify.config['idleless'].get('CheckRateMinutes', 3)) * 60  # seconds
+IDLE_THRESHOLD = int(clockify.config['idleless'].get('IdleThresholdMinutes', 15)) * 60  # seconds
 
 TRAY_TOOLTIP = 'Clockify Idleless'
-TRAY_ICON = 'Clockify.ico'
+TRAY_ICON = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Clockify.ico')
 
-CACHE_FILE = 'cache.json'
+CACHE_FILE = os.path.join(clockify.user_config_folder, 'cache.json')
 CACHE = {}
 
 
@@ -179,7 +176,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
         wx.MessageBox("Active time today: {}\n"
                       "Duration since start of day: {}.".format(duration, day_duration),
-                            "Clockify Duration", wx.OK | wx.ICON_INFORMATION)
+                      "Clockify Duration", wx.OK | wx.ICON_INFORMATION)
 
     def on_exit(self, event):
         wx.CallAfter(self.Destroy)
@@ -194,13 +191,7 @@ class App(wx.App):
         return True
 
 
-def main():
-    load_cache()
-    idle_check()
-    app = App(False)
-    app.MainLoop()
-
-
+original_sigint = signal.getsignal(signal.SIGINT)
 def exit_gracefully(signum, frame):
     # restore the original signal handler as otherwise evil things will happen
     # in raw_input when CTRL+C is pressed, and our signal handler is not re-entrant
@@ -210,9 +201,19 @@ def exit_gracefully(signum, frame):
     sys.exit(1)
 
 
-if __name__ == '__main__':
+def main():
     # store the original SIGINT handler
-    original_sigint = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, exit_gracefully)
     atexit.register(exit_app)
+
+    load_cache()
+    idle_check()
+    app = App(False)
+    app.MainLoop()
+
+    # while not CACHE.get('exit', False):
+    #    time.sleep(LOOP_TIME)
+
+
+if __name__ == '__main__':
     main()
