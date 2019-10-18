@@ -174,7 +174,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     def show_duration():
         now = datetime.timestamp(datetime.now(timezone.utc))
         # duration = now - CACHE.get('start_timestamp', now)  # Time entry duration
-        duration = round(CACHE['today_active_time'] + now - CACHE['start_timestamp'])
+        duration = round(CACHE['today_active_time'] + now - CACHE.get('start_timestamp', now))
         duration_str = str(timedelta(seconds=duration))
 
         now_local = datetime.timestamp(datetime.now())
