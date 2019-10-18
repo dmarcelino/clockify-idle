@@ -22,6 +22,7 @@ setuptools.setup(
     install_requires=['python-dateutil>=2.8.0', 'requests>=2.22.0', 'wxPython>=4.0.6', 'XlsxWriter>=1.2.2'],
     entry_points = {
         'gui_scripts': ['clockify_idleless=clockify_idleless.idleless:main'],
+        'console_scripts': ['clockify_to_workbook=clockify_idleless.clockify_to_workbook:main'],
     },
     include_package_data=True,
 )
