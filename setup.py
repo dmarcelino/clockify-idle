@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="clockify_idleless",
-    version="0.0.1",
+    version="0.1.0",
     author="Dário Marcelino",
     author_email="dario@appscot.com",
     description="Simple Clockify script to track active time",
