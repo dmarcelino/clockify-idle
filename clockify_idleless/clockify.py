@@ -22,7 +22,11 @@ config = configparser.ConfigParser()
 config.read([default_config, user_config])
 
 if not config['clockify.me'].get('APIKey'):
-    config['clockify.me']['APIKey'] = os.environ['CLOCKIFY_KEY']
+    try:
+        config['clockify.me']['APIKey'] = os.environ['CLOCKIFY_KEY']
+    except KeyError:
+        print('ERROR: No Clockify API Key found. Please add it to {}.'.format(user_config))
+        exit(1)
 
 API_KEY = config['clockify.me']['APIKey']
 API_BASE = config['clockify.me']['APIBaseEndpoint']
