@@ -172,21 +172,23 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
     @staticmethod
     def show_duration():
+        now_local = datetime.timestamp(datetime.now())
+        today_start = datetime.fromtimestamp(CACHE.get('today_start_timestamp', now_local)).strftime("%H:%M")
+
+        day_duration = round(now_local - CACHE.get('today_start_timestamp', now_local))
+        day_duration_str = str(timedelta(seconds=day_duration))
+
         now = datetime.timestamp(datetime.now(timezone.utc))
         # duration = now - CACHE.get('start_timestamp', now)  # Time entry duration
         duration = round(CACHE['today_active_time'] + now - CACHE.get('start_timestamp', now))
         duration_str = str(timedelta(seconds=duration))
 
-        now_local = datetime.timestamp(datetime.now())
-        day_duration = round(now_local - CACHE.get('today_start_timestamp', now_local))
-        day_duration_str = str(timedelta(seconds=day_duration))
-
         idle_time = day_duration-duration
         idle_time_str = str(timedelta(seconds=idle_time))
 
-        wx.MessageBox("Active time today: {}\n"
-                      "Duration since start of day: {}\n"
-                      "Idle time: {}.".format(duration_str, day_duration_str, idle_time_str),
+        wx.MessageBox("Started at: {} ({} ago)\n"
+                      "Active time today: {}\n"
+                      "Idle time: {}.".format(today_start, day_duration_str, duration_str, idle_time_str),
                       "Clockify Duration", wx.OK | wx.ICON_INFORMATION)
 
 
