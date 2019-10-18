@@ -6,8 +6,6 @@ from datetime import timedelta
 from datetime import timezone
 import json
 import os
-import signal
-import sys
 import threading
 import wx.adv
 import wx
@@ -161,58 +159,52 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         self.SetIcon(icon, TRAY_TOOLTIP)
 
     def on_left_down(self, event):
-        print ('Tray icon was left-clicked.')
+        print('Tray icon was left-clicked.')
+        self.show_duration()
 
     def on_duration(self, event):
-        print ('Duration pressed')
-        now = datetime.timestamp(datetime.now(timezone.utc))
-        # duration = now - CACHE.get('start_timestamp', now)  # Time entry duration
-        duration = CACHE['today_active_time'] + now - CACHE['start_timestamp']
-        duration = str(timedelta(seconds=round(duration)))
-
-        now_local = datetime.timestamp(datetime.now())
-        day_duration = now_local - CACHE.get('today_start_timestamp', now_local)
-        day_duration = str(timedelta(seconds=round(day_duration)))
-
-        wx.MessageBox("Active time today: {}\n"
-                      "Duration since start of day: {}.".format(duration, day_duration),
-                      "Clockify Duration", wx.OK | wx.ICON_INFORMATION)
+        print('Duration menu pressed')
+        self.show_duration()
 
     def on_exit(self, event):
         wx.CallAfter(self.Destroy)
         self.frame.Close()
 
+    @staticmethod
+    def show_duration():
+        now = datetime.timestamp(datetime.now(timezone.utc))
+        # duration = now - CACHE.get('start_timestamp', now)  # Time entry duration
+        duration = round(CACHE['today_active_time'] + now - CACHE['start_timestamp'])
+        duration_str = str(timedelta(seconds=duration))
+
+        now_local = datetime.timestamp(datetime.now())
+        day_duration = round(now_local - CACHE.get('today_start_timestamp', now_local))
+        day_duration_str = str(timedelta(seconds=day_duration))
+
+        idle_time = day_duration-duration
+        idle_time_str = str(timedelta(seconds=idle_time))
+
+        wx.MessageBox("Active time today: {}\n"
+                      "Duration since start of day: {}\n"
+                      "Idle time: {}.".format(duration_str, day_duration_str, idle_time_str),
+                      "Clockify Duration", wx.OK | wx.ICON_INFORMATION)
+
 
 class App(wx.App):
     def OnInit(self):
-        frame=wx.Frame(None)
+        frame = wx.Frame(None)
         self.SetTopWindow(frame)
         TaskBarIcon(frame)
         return True
 
 
-original_sigint = signal.getsignal(signal.SIGINT)
-def exit_gracefully(signum, frame):
-    # restore the original signal handler as otherwise evil things will happen
-    # in raw_input when CTRL+C is pressed, and our signal handler is not re-entrant
-    signal.signal(signal.SIGINT, original_sigint)
-    print('Exiting gracefully')
-    exit_app()
-    sys.exit(1)
-
-
 def main():
-    # store the original SIGINT handler
-    signal.signal(signal.SIGINT, exit_gracefully)
     atexit.register(exit_app)
 
     load_cache()
     idle_check()
     app = App(False)
     app.MainLoop()
-
-    # while not CACHE.get('exit', False):
-    #    time.sleep(LOOP_TIME)
 
 
 if __name__ == '__main__':
