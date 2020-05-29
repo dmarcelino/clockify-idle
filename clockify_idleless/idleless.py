@@ -126,7 +126,13 @@ def get_idle_duration():
     last_input_info = LASTINPUTINFO()
     last_input_info.cbSize = sizeof(last_input_info)
     windll.user32.GetLastInputInfo(byref(last_input_info))
-    millis = windll.kernel32.GetTickCount() - last_input_info.dwTime
+    tick_count = windll.kernel32.GetTickCount()
+    
+    # GetTickCount returns an unsigned integer but the value is actually an unsigned int
+    # So we have to adjust for it 
+    tick_count += 2 ** 32 if tick_count < 0 else 0
+    
+    millis = tick_count - last_input_info.dwTime
     return millis / 1000.0
 
 
